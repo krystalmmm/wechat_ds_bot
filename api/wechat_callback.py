@@ -1,87 +1,146 @@
-from flask import Flask, request, jsonify
+from flask import Flask, request, jsonify, make_response
 import requests
+import xml.etree.ElementTree as ET
 import hashlib
 import time
-import xml.etree.ElementTree as ET
 
 app = Flask(__name__)
 
-# 微信公众号配置
-WECHAT_TOKEN = 'wechat_ds_bot_2025'  # 微信公众号的 Token
-WECHAT_AES_KEY = 'LXxFbmjsS5tCD3A9UO8XI0vtFevrl5OgRuxx0Y0sTRC'  # 微信公众号的 EncodingAESKey
+# DeepSeek API Settings
+DEEPSEEK_API_URL = "https://api.deepseek.com/chat/completions"
+DEEPSEEK_API_KEY = "sk-a67d0f343e2149399839af4d304fb758"
 
-# DeepSeek API 配置
-DEEPSEEK_API_URL = 'https://wechat-ds-bot.vercel.app/'  # DeepSeek API 的 URL，但因为我们用的是vercel，所以这里是vercel的url
-DEEPSEEK_API_KEY = 'sk-a67d0f343e2149399839af4d304fb758'  # DeepSeek API 的 Key
+# WeChat Token
+WECHAT_TOKEN = "wechat_ds_bot_2025"
 
-# 验证微信公众号服务器的有效性
-@app.route('/wechat/callback', methods=['GET'])
+
+# Handle the verification request from the WeChat server
+@app.route("/wechat/callback", methods=["GET"])
 def wechat_verify():
-    signature = request.args.get('signature', '')
-    timestamp = request.args.get('timestamp', '')
-    nonce = request.args.get('nonce', '')
-    echostr = request.args.get('echostr', '')
+    # Retrieve the parameters sent by the WeChat server
+    signature = request.args.get("signature", "")
+    timestamp = request.args.get("timestamp", "")
+    nonce = request.args.get("nonce", "")
+    echostr = request.args.get("echostr", "")
 
-    # 验证签名
+    # Verify the signature
     if check_signature(signature, timestamp, nonce):
         return echostr
     else:
-        return 'Verification failed', 403
+        return "Invalid signature", 403
 
-# 处理微信公众号消息
-@app.route('/wechat/callback', methods=['POST'])
+
+# Handle WeChat messages
+@app.route("/wechat/callback", methods=["POST"])
 def wechat_callback():
-    # 解析 XML 数据
+    # Parse the XML data sent by the WeChat server
     xml_data = request.data
     root = ET.fromstring(xml_data)
-    msg_type = root.find('MsgType').text
-    from_user = root.find('FromUserName').text
-    to_user = root.find('ToUserName').text
-    content = root.find('Content').text if root.find('Content') is not None else ''
 
-    # 调用 DeepSeek API 处理消息
-    if msg_type == 'text':
-        reply_content = call_deepseek_api(content)
+    # Extract the message content
+    msg_type = root.find("MsgType").text
+    if msg_type == "text":
+        user_message = root.find("Content").text
+        from_user = root.find("FromUserName").text
+        to_user = root.find("ToUserName").text
+
+        # Call the DeepSeek API to get a response
+        deepseek_reply = call_deepseek_api(user_message)
+
+        # Construct the XML response to return to the WeChat server
+        response_xml = f"""
+        <xml>
+            <ToUserName><![CDATA[{from_user}]]></ToUserName>
+            <FromUserName><![CDATA[{to_user}]]></FromUserName>
+            <CreateTime>{int(time.time())}</CreateTime>
+            <MsgType><![CDATA[text]]></MsgType>
+            <Content><![CDATA[{deepseek_reply}]]></Content>
+        </xml>
+        """
+        return response_xml, 200, {"Content-Type": "application/xml"}
     else:
-        reply_content = '暂不支持此类型消息'
+        return ""
 
-    # 返回 XML 格式的回复
-    reply_xml = generate_reply_xml(to_user, from_user, reply_content)
-    return reply_xml, {'Content-Type': 'application/xml'}
 
-# 验证签名
-def check_signature(signature, timestamp, nonce):
-    tmp_list = sorted([WECHAT_TOKEN, timestamp, nonce])
-    tmp_str = ''.join(tmp_list)
-    sha1 = hashlib.sha1(tmp_str.encode('utf-8')).hexdigest()
-    return sha1 == signature
-
-# 调用 DeepSeek API
+# Call DeepSeek API
+"""
 def call_deepseek_api(message):
     headers = {
-        'Authorization': f'Bearer {DEEPSEEK_API_KEY}',
-        'Content-Type': 'application/json'
+        "Authorization": f"Bearer {DEEPSEEK_API_KEY}",
+        "Content-Type": "application/json",
+    }
+    payload = {"message": message}
+    response = requests.post(DEEPSEEK_API_URL, json=payload, headers=headers)
+    deepseek_response = response.json()
+    return deepseek_response.get("reply", "Sorry, I didn't understand that.")
+"""
+
+
+def call_deepseek_api(message):
+    headers = {
+        "Authorization": f"Bearer {DEEPSEEK_API_KEY}",
+        "Content-Type": "application/json",
     }
     payload = {
-        'message': message
+        "model": "deepseek-chat",
+        "messages": [{"role": "user", "content": message}],
     }
-    response = requests.post(DEEPSEEK_API_URL, json=payload, headers=headers)
-    if response.status_code == 200:
-        return response.json().get('reply', '')
+
+    print(f"Sending request to DeepSeek API: {payload}")
+
+    try:
+        response = requests.post(DEEPSEEK_API_URL, json=payload, headers=headers)
+        response.raise_for_status()  # Check HTTP Status Code
+    except requests.exceptions.RequestException as e:
+        print(f"API request failed: {e}")  # Print Error Message
+        return "Sorry, there was an error processing your request."
+
+    deepseek_response = response.json()
+    print(f"DeepSeek API response: {deepseek_response}")  # Print API Response
+
+    # Extract the response message from the API response
+    if "choices" in deepseek_response and len(deepseek_response["choices"]) > 0:
+        return deepseek_response["choices"][0]["message"]["content"]
     else:
-        return '调用 DeepSeek API 失败'
+        return "Sorry, I didn't understand that."
 
-# 生成回复 XML
-def generate_reply_xml(to_user, from_user, content):
-    return f'''
-    <xml>
-        <ToUserName><![CDATA[{to_user}]]></ToUserName>
-        <FromUserName><![CDATA[{from_user}]]></FromUserName>
-        <CreateTime>{int(time.time())}</CreateTime>
-        <MsgType><![CDATA[text]]></MsgType>
-        <Content><![CDATA[{content}]]></Content>
-    </xml>
-    '''
 
-if __name__ == '__main__':
-    app.run(host='0.0.0.0', port=80)
+# Verify the signature
+def check_signature(signature, timestamp, nonce):
+    token = WECHAT_TOKEN
+
+    # Sort the token, timestamp, and nonce
+    tmp_list = sorted([token, timestamp, nonce])
+
+    # Concatenate the sorted strings
+    tmp_str = "".join(tmp_list)
+
+    # Calculate the SHA1 hash
+    tmp_str = hashlib.sha1(tmp_str.encode("utf-8")).hexdigest()
+
+    # Compare the calculated signature with the one sent by WeChat
+    return tmp_str == signature
+
+
+"""
+# Generate a signature for testing
+import hashlib
+
+def generate_signature(token, timestamp, nonce):
+    tmp_list = sorted([token, timestamp, nonce])
+    tmp_str = "".join(tmp_list)
+    tmp_str = hashlib.sha1(tmp_str.encode("utf-8")).hexdigest()
+    return tmp_str
+
+
+# Retrieve the signature for testing
+token = WECHAT_TOKEN
+timestamp = "123456789"
+nonce = "123456"
+
+signature = generate_signature(token, timestamp, nonce)
+print(f"Signature: {signature}")
+"""
+
+if __name__ == "__main__":
+    app.run(host="0.0.0.0", port=5001, threaded=True)
