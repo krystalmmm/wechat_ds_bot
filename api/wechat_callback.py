@@ -62,20 +62,7 @@ def wechat_callback():
         return ""
 
 
-# Call DeepSeek API
-"""
-def call_deepseek_api(message):
-    headers = {
-        "Authorization": f"Bearer {DEEPSEEK_API_KEY}",
-        "Content-Type": "application/json",
-    }
-    payload = {"message": message}
-    response = requests.post(DEEPSEEK_API_URL, json=payload, headers=headers)
-    deepseek_response = response.json()
-    return deepseek_response.get("reply", "Sorry, I didn't understand that.")
-"""
-
-
+# Call DeepSeek API to get a response
 def call_deepseek_api(message):
     headers = {
         "Authorization": f"Bearer {DEEPSEEK_API_KEY}",
@@ -142,5 +129,6 @@ signature = generate_signature(token, timestamp, nonce)
 print(f"Signature: {signature}")
 """
 
+# Remove this block of code when deploying to production
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=5000, threaded=True)
