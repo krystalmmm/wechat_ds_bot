@@ -24,7 +24,6 @@ def wechat_verify():
     nonce = request.args.get("nonce", "")
     echostr = request.args.get("echostr", "")
 
-    """
     # Debugging logs
     print(
         f"Received WeChat request: signature={signature}, timestamp={timestamp}, nonce={nonce}, echostr={echostr}"
@@ -34,7 +33,6 @@ def wechat_verify():
     if not all([signature, timestamp, nonce, echostr]):
         print("Missing one or more parameters from WeChat request.")
         return "Missing parameters", 400
-    """
 
     # Generate the signature based on received timestamp, nonce, and token
     is_valid = check_signature(signature, timestamp, nonce)
