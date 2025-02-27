@@ -23,6 +23,11 @@ def wechat_verify():
     nonce = request.args.get("nonce", "")
     echostr = request.args.get("echostr", "")
 
+    # Debugging logs
+    print(
+        f"Received WeChat request: signature={signature}, timestamp={timestamp}, nonce={nonce}, echostr={echostr}"
+    )
+
     # Verify the signature
     if check_signature(signature, timestamp, nonce):
         return echostr
@@ -93,6 +98,7 @@ def call_deepseek_api(message):
 
 
 # Verify the signature
+"""
 def check_signature(signature, timestamp, nonce):
     token = WECHAT_TOKEN
 
@@ -107,6 +113,23 @@ def check_signature(signature, timestamp, nonce):
 
     # Compare the calculated signature with the one sent by WeChat
     return tmp_str == signature
+"""
+
+
+def check_signature(signature, timestamp, nonce):
+    token = WECHAT_TOKEN
+
+    # Ensure everything is a string
+    tmp_list = sorted([str(token), str(timestamp), str(nonce)])
+
+    # Concatenate, hash, and compare
+    tmp_str = "".join(tmp_list).encode("utf-8")
+    sha1_hash = hashlib.sha1(tmp_str).hexdigest()
+
+    print(f"Expected Signature: {sha1_hash}")
+    print(f"Received Signature: {signature}")
+
+    return sha1_hash == signature
 
 
 """
@@ -131,4 +154,4 @@ print(f"Signature: {signature}")
 
 # Remove this block of code when deploying to production
 if __name__ == "__main__":
-    app.run(host="0.0.0.0", port=5000, threaded=True)
+    app.run(host="0.0.0.0", port=5001, debug=True, threaded=True)
