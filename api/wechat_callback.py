@@ -11,7 +11,7 @@ DEEPSEEK_API_URL = "https://api.deepseek.com/chat/completions"
 DEEPSEEK_API_KEY = "sk-a67d0f343e2149399839af4d304fb758"
 
 # WeChat Token
-WECHAT_TOKEN = "wechat_ds_bot_2025"
+WECHAT_TOKEN = "ds_wechat_bot_2025"
 
 
 # Handle the verification request from the WeChat server
