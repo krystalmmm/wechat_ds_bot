@@ -17,22 +17,37 @@ WECHAT_TOKEN = "ds_wechat_bot_2025"
 # Handle the verification request from the WeChat server
 @app.route("/wechat/callback", methods=["GET"])
 def wechat_verify():
+    print("WeChat callback endpoint hit!")
     # Retrieve the parameters sent by the WeChat server
     signature = request.args.get("signature", "")
     timestamp = request.args.get("timestamp", "")
     nonce = request.args.get("nonce", "")
     echostr = request.args.get("echostr", "")
 
+    """
     # Debugging logs
     print(
         f"Received WeChat request: signature={signature}, timestamp={timestamp}, nonce={nonce}, echostr={echostr}"
     )
 
-    # Verify the signature
-    if check_signature(signature, timestamp, nonce):
+    # Check if any parameter is missing
+    if not all([signature, timestamp, nonce, echostr]):
+        print("Missing one or more parameters from WeChat request.")
+        return "Missing parameters", 400
+    """
+
+    # Generate the signature based on received timestamp, nonce, and token
+    is_valid = check_signature(signature, timestamp, nonce)
+
+    """
+    # Compare received signature with generated signature
+    if is_valid:
+        print("Signature is valid.")
         return echostr
     else:
+        print("Invalid signature.")
         return "Invalid signature", 403
+    """
 
 
 # Handle WeChat messages
@@ -119,17 +134,16 @@ def check_signature(signature, timestamp, nonce):
 def check_signature(signature, timestamp, nonce):
     token = WECHAT_TOKEN
 
-    # Ensure everything is a string
-    tmp_list = sorted([str(token), str(timestamp), str(nonce)])
+    # Sort timestamp, nonce, and token in lexicographical order
+    tmp_list = sorted([token, timestamp, nonce])
 
-    # Concatenate, hash, and compare
-    tmp_str = "".join(tmp_list).encode("utf-8")
-    sha1_hash = hashlib.sha1(tmp_str).hexdigest()
+    # Concatenate the sorted list into a single string
+    tmp_str = "".join(tmp_list)
 
-    print(f"Expected Signature: {sha1_hash}")
-    print(f"Received Signature: {signature}")
+    # Generate the SHA1 hash of the concatenated string
+    calculated_signature = hashlib.sha1(tmp_str.encode("utf-8")).hexdigest()
 
-    return sha1_hash == signature
+    return calculated_signature == signature
 
 
 """
