@@ -39,7 +39,6 @@ def wechat_verify():
     # Generate the signature based on received timestamp, nonce, and token
     is_valid = check_signature(signature, timestamp, nonce)
 
-    """
     # Compare received signature with generated signature
     if is_valid:
         print("Signature is valid.")
@@ -47,7 +46,6 @@ def wechat_verify():
     else:
         print("Invalid signature.")
         return "Invalid signature", 403
-    """
 
 
 # Handle WeChat messages
