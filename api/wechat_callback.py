@@ -108,6 +108,14 @@ def call_deepseek_api(message):
         return "Sorry, I didn't understand that."
 
 
+# Test the DeepSeek API
+@app.route("/wechat/test", methods=["GET"])
+def test_deepseek():
+    test_message = request.args.get("message", "测试 DeepSeek API")
+    result = call_deepseek_api(test_message)
+    return jsonify({"message": test_message, "response": result})
+
+
 # Verify the signature
 def check_signature(signature, timestamp, nonce):
     token = WECHAT_TOKEN
