@@ -109,24 +109,6 @@ def call_deepseek_api(message):
 
 
 # Verify the signature
-"""
-def check_signature(signature, timestamp, nonce):
-    token = WECHAT_TOKEN
-
-    # Sort the token, timestamp, and nonce
-    tmp_list = sorted([token, timestamp, nonce])
-
-    # Concatenate the sorted strings
-    tmp_str = "".join(tmp_list)
-
-    # Calculate the SHA1 hash
-    tmp_str = hashlib.sha1(tmp_str.encode("utf-8")).hexdigest()
-
-    # Compare the calculated signature with the one sent by WeChat
-    return tmp_str == signature
-"""
-
-
 def check_signature(signature, timestamp, nonce):
     token = WECHAT_TOKEN
 
@@ -142,9 +124,9 @@ def check_signature(signature, timestamp, nonce):
     return calculated_signature == signature
 
 
-"""
 # Generate a signature for testing
 import hashlib
+
 
 def generate_signature(token, timestamp, nonce):
     tmp_list = sorted([token, timestamp, nonce])
@@ -160,7 +142,6 @@ nonce = "123456"
 
 signature = generate_signature(token, timestamp, nonce)
 print(f"Signature: {signature}")
-"""
 
 # Remove this block of code when deploying to production
 if __name__ == "__main__":
