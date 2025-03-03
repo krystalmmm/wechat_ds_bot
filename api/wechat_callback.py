@@ -3,6 +3,8 @@ import requests
 import xml.etree.ElementTree as ET
 import hashlib
 import time
+from requests.adapters import HTTPAdapter
+from urllib3.util.retry import Retry
 
 app = Flask(__name__)
 
@@ -79,6 +81,7 @@ def wechat_callback():
 
 
 # Call DeepSeek API to get a response
+"""
 def call_deepseek_api(message):
     headers = {
         "Authorization": f"Bearer {DEEPSEEK_API_KEY}",
@@ -110,12 +113,62 @@ def call_deepseek_api(message):
         return deepseek_response["choices"][0]["message"]["content"]
     else:
         return "Sorry, I didn't understand that."
+"""
+
+
+def call_deepseek_api(message):
+    headers = {
+        "Authorization": f"Bearer {DEEPSEEK_API_KEY}",
+        "Content-Type": "application/json",
+    }
+    payload = {
+        "model": "deepseek-chat",
+        "messages": [{"role": "user", "content": message}],
+        "temperature": 0.7,
+        "max_tokens": 1000,
+    }
+
+    # 更新 API URL
+    api_url = "https://api.deepseek.com/v1/chat/completions"
+    print(f"Sending request to DeepSeek API URL: {api_url}")
+    print(f"With payload: {payload}")
+
+    retry_strategy = Retry(
+        total=3,
+        backoff_factor=1,
+        status_forcelist=[429, 500, 502, 503, 504],
+    )
+    adapter = HTTPAdapter(max_retries=retry_strategy)
+    session = requests.Session()
+    session.mount("https://", adapter)
+
+    try:
+        # response = requests.post(api_url, json=payload, headers=headers, timeout=30)
+        response = session.post(api_url, json=payload, headers=headers, timeout=30)
+        print(f"Response status code: {response.status_code}")
+        print(f"Response headers: {response.headers}")
+        print(f"Response content: {response.text[:500]}...")  # 只打印前500个字符
+        response.raise_for_status()
+    except requests.exceptions.RequestException as e:
+        print(f"API request failed with detailed error: {str(e)}")
+        return f"API request failed: {str(e)}"
+
+    try:
+        deepseek_response = response.json()
+        print(f"DeepSeek API response: {deepseek_response}")
+
+        if "choices" in deepseek_response and len(deepseek_response["choices"]) > 0:
+            return deepseek_response["choices"][0]["message"]["content"]
+        else:
+            return f"API response format error: {deepseek_response}"
+    except Exception as e:
+        return f"Error processing API response: {str(e)}"
 
 
 # Test the DeepSeek API
 @app.route("/wechat/test", methods=["GET"])
 def test_deepseek():
-    test_message = request.args.get("message", "测试 DeepSeek API")
+    test_message = request.args.get("message", "Test DeepSeek API")
     result = call_deepseek_api(test_message)
     return jsonify({"message": test_message, "response": result})
 
