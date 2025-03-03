@@ -92,7 +92,9 @@ def call_deepseek_api(message):
     print(f"Sending request to DeepSeek API: {payload}")
 
     try:
-        response = requests.post(DEEPSEEK_API_URL, json=payload, headers=headers)
+        response = requests.post(
+            DEEPSEEK_API_URL, json=payload, headers=headers, timeout=5
+        )
         response.raise_for_status()  # Check HTTP Status Code
     except requests.exceptions.RequestException as e:
         print(f"API request failed: {e}")  # Print Error Message
@@ -114,6 +116,12 @@ def test_deepseek():
     test_message = request.args.get("message", "测试 DeepSeek API")
     result = call_deepseek_api(test_message)
     return jsonify({"message": test_message, "response": result})
+
+
+# Simple test endpoint
+@app.route("/wechat/simple-test", methods=["GET"])
+def simple_test():
+    return jsonify({"status": "ok", "message": "Server is working"})
 
 
 # Verify the signature
