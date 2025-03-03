@@ -7,7 +7,7 @@ import time
 app = Flask(__name__)
 
 # DeepSeek API Settings
-DEEPSEEK_API_URL = "https://api.deepseek.com/chat/completions"
+DEEPSEEK_API_URL = "https://api.deepseek.com/v1/chat/completions"
 DEEPSEEK_API_KEY = "sk-a67d0f343e2149399839af4d304fb758"
 
 # WeChat Token
@@ -87,6 +87,8 @@ def call_deepseek_api(message):
     payload = {
         "model": "deepseek-chat",
         "messages": [{"role": "user", "content": message}],
+        "temperature": 0.7,  # Optional parameter
+        "max_tokens": 2048,  # Optional parameter
     }
 
     print(f"Sending request to DeepSeek API: {payload}")
