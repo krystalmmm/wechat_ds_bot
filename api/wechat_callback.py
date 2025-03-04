@@ -53,6 +53,43 @@ def wechat_verify():
 def wechat_callback():
     # Parse the XML data sent by the WeChat server
     xml_data = request.data
+    print(f"Received XML: {xml_data}")
+
+    try:
+        root = ET.fromstring(xml_data)
+
+        # Extract the message content
+        msg_type = root.find("MsgType").text
+        from_user = root.find("FromUserName").text
+        to_user = root.find("ToUserName").text
+
+        # Simple response
+        response = "Received your message! This is a test message."
+
+        # Create the XML response
+        response_xml = f"""
+        <xml>
+        <ToUserName><![CDATA[{from_user}]]></ToUserName>
+        <FromUserName><![CDATA[{to_user}]]></FromUserName>
+        <CreateTime>{int(time.time())}</CreateTime>
+        <MsgType><![CDATA[text]]></MsgType>
+        <Content><![CDATA[{response}]]></Content>
+        </xml>
+        """
+
+        print(f"Sending response: {response_xml}")
+        return response_xml, 200, {"Content-Type": "application/xml"}
+    except Exception as e:
+        print(f"Error processing request: {str(e)}")
+        return "success"  # Return "success" to avoid WeChat server retrying
+
+
+"""
+# Handle WeChat messages
+@app.route("/wechat/callback", methods=["POST"])
+def wechat_callback():
+    # Parse the XML data sent by the WeChat server
+    xml_data = request.data
     root = ET.fromstring(xml_data)
 
     # Extract the message content
@@ -67,20 +104,18 @@ def wechat_callback():
 
         # Construct the XML response to return to the WeChat server
         response_xml = f"""
-        <xml>
-            <ToUserName><![CDATA[{from_user}]]></ToUserName>
-            <FromUserName><![CDATA[{to_user}]]></FromUserName>
-            <CreateTime>{int(time.time())}</CreateTime>
-            <MsgType><![CDATA[text]]></MsgType>
-            <Content><![CDATA[{deepseek_reply}]]></Content>
-        </xml>
-        """
-        return response_xml, 200, {"Content-Type": "application/xml"}
-    else:
-        return ""
+# <xml>
+#    <ToUserName><![CDATA[{from_user}]]></ToUserName>
+#    <FromUserName><![CDATA[{to_user}]]></FromUserName>
+#    <CreateTime>{int(time.time())}</CreateTime>
+#    <MsgType><![CDATA[text]]></MsgType>
+#    <Content><![CDATA[{deepseek_reply}]]></Content>
+# </xml>
+# return response_xml, 200, {"Content-Type": "application/xml"}
+# else:
+#    return ""
 
 
-# Call DeepSeek API to get a response
 """
 def call_deepseek_api(message):
     headers = {
@@ -116,6 +151,7 @@ def call_deepseek_api(message):
 """
 
 
+# Call DeepSeek API to get a response
 def call_deepseek_api(message):
     headers = {
         "Authorization": f"Bearer {DEEPSEEK_API_KEY}",
@@ -128,7 +164,7 @@ def call_deepseek_api(message):
         "max_tokens": 1000,
     }
 
-    # 更新 API URL
+    # Update API URL
     api_url = "https://api.deepseek.com/v1/chat/completions"
     print(f"Sending request to DeepSeek API URL: {api_url}")
     print(f"With payload: {payload}")
@@ -147,7 +183,7 @@ def call_deepseek_api(message):
         response = session.post(api_url, json=payload, headers=headers, timeout=30)
         print(f"Response status code: {response.status_code}")
         print(f"Response headers: {response.headers}")
-        print(f"Response content: {response.text[:500]}...")  # 只打印前500个字符
+        print(f"Response content: {response.text[:500]}...")
         response.raise_for_status()
     except requests.exceptions.RequestException as e:
         print(f"API request failed with detailed error: {str(e)}")
